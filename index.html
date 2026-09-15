@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐴 鎌倉時代クイズ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+:root {
+  --primary: #2f4a6d;
+  --primary-light: #6b8fb8;
+  --primary-dark: #1d2f47;
+  --accent: #8a6e00;
+  --gold: #c8a000;
+  --gold-dark: #8a6e00;
+  --parchment: #fdf8ed;
+  --parchment2: #f0e4c0;
+  --ink: #1e150a;
+  --success: #2e7d32;
+  --danger: #c62828;
+  --shadow: 0 4px 24px rgba(29,47,71,0.3);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #120c02;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 48px;
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(92,74,30,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(122,30,30,0.2) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(160,124,58,0.03) 44px, rgba(160,124,58,0.03) 45px),
+    #120c02;
+  pointer-events: none; z-index: 0;
+}
+
+#hud {
+  position: sticky; top: 0; z-index: 100;
+  width: 100%; max-width: 540px;
+  background: linear-gradient(135deg, #120c02 0%, #251a06 100%);
+  border-bottom: 2px solid var(--primary);
+  padding: 10px 16px 8px; display: none;
+}
+.hud-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.hud-level { font-family:'Kaisei Decol',serif; font-size:0.95rem; color:var(--primary-light); font-weight:700; }
+.hud-title-badge { font-size:0.7rem; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; padding:2px 10px; border-radius:999px; font-weight:700; }
+.hud-score-chips { display:flex; gap:8px; }
+.hud-chip { font-size:0.78rem; font-weight:700; padding:2px 10px; border-radius:999px; }
+.hud-chip.ok { background:rgba(46,125,50,0.25); color:#81c784; }
+.hud-chip.ng { background:rgba(198,40,40,0.25); color:#ef9a9a; }
+.exp-bar-wrap { display:flex; align-items:center; gap:8px; }
+.exp-label { font-size:0.7rem; color:var(--primary-light); white-space:nowrap; }
+.exp-bar-bg { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden; }
+.exp-bar-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--primary-light)); border-radius:999px; transition:width 0.6s cubic-bezier(.4,0,.2,1); }
+
+#levelup-overlay {
+  display:none; position:fixed; inset:0; z-index:999;
+  background:rgba(18,12,2,0.9);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center;
+}
+#levelup-overlay.show { display:flex; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+.levelup-ring {
+  width:160px; height:160px; border-radius:50%;
+  background:radial-gradient(circle,rgba(160,124,58,0.3) 0%,transparent 70%);
+  display:flex; align-items:center; justify-content:center; margin-bottom:20px;
+  animation:ringPulse 1s ease-in-out infinite;
+}
+@keyframes ringPulse { 0%,100%{box-shadow:0 0 0 0 rgba(160,124,58,0.4);}50%{box-shadow:0 0 0 20px rgba(160,124,58,0);} }
+.levelup-emoji { font-size:5rem; }
+.levelup-text { font-family:'Kaisei Decol',serif; color:var(--primary-light); font-size:2rem; font-weight:700; text-shadow:0 0 20px rgba(160,124,58,0.8); margin-bottom:8px; }
+.levelup-level { font-size:1rem; color:#c49a5a; margin-bottom:12px; }
+.levelup-title { font-size:1.1rem; color:var(--primary-light); background:rgba(160,124,58,0.1); border:1px solid rgba(160,124,58,0.3); padding:8px 24px; border-radius:999px; margin-bottom:24px; }
+.btn-levelup-ok { padding:12px 40px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:1rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+#title-overlay {
+  display:none; position:fixed; inset:0; z-index:998;
+  background:rgba(18,12,2,0.92);
+  align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:24px;
+}
+#title-overlay.show { display:flex; animation:fadeIn 0.4s ease; }
+.title-scroll { background:var(--parchment); border:3px solid var(--primary); border-radius:8px; padding:32px 28px; max-width:320px; width:100%; }
+.title-scroll::before { content:'✦ ✦ ✦'; font-size:0.7rem; color:var(--primary); letter-spacing:6px; display:block; margin-bottom:16px; }
+.title-new { font-size:0.75rem; color:var(--danger); font-weight:700; letter-spacing:0.1em; }
+.title-main { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:var(--ink); margin:8px 0; }
+.title-emoji { font-size:2.5rem; margin:8px 0; }
+.title-desc { font-size:0.85rem; color:#5a3a1a; line-height:1.6; margin-top:8px; }
+.btn-title-ok { margin-top:20px; padding:10px 32px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+
+#intro-screen { width:100%; display:flex; flex-direction:column; align-items:center; padding:48px 16px 60px; position:relative; z-index:1; }
+.intro-emblem { font-size:5rem; margin-bottom:8px; filter:drop-shadow(0 4px 16px rgba(160,124,58,0.5)); animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);} }
+.intro-title { font-family:'Kaisei Decol',serif; font-size:1.8rem; color:var(--primary-light); text-shadow:0 2px 12px rgba(160,124,58,0.4); margin-bottom:4px; text-align:center; }
+.intro-sub { color:#6b8fb8; font-size:0.85rem; margin-bottom:28px; text-align:center; }
+.intro-card { width:100%; max-width:340px; background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:28px; text-align:center; }
+.intro-tags { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:16px; }
+.itag { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; background:rgba(92,74,30,0.12); color:var(--primary-dark); border:1px solid rgba(92,74,30,0.25); }
+.intro-desc { font-size:0.88rem; color:#5a3a1a; line-height:1.8; }
+.btn-start { padding:16px 48px; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; border:none; border-radius:8px; font-family:'Kaisei Decol',serif; font-size:1.2rem; font-weight:700; cursor:pointer; box-shadow:0 4px 20px rgba(160,124,58,0.4); transition:all 0.2s; letter-spacing:0.05em; }
+.btn-start:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(160,124,58,0.5); }
+
+#quiz-screen { display:none; width:100%; max-width:540px; padding:16px 0 0; position:relative; z-index:1; }
+.section-badge { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.7rem; font-weight:700; padding:3px 14px; border-radius:999px; margin-bottom:8px; letter-spacing:0.05em; }
+.q-card { background:var(--parchment); border-radius:6px; padding:28px 20px 20px; box-shadow:var(--shadow),inset 0 0 0 1px rgba(92,74,30,0.18); border-top:3px solid var(--primary); margin:0 16px; animation:cardIn 0.35s cubic-bezier(.4,0,.2,1); }
+@keyframes cardIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+.q-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.q-num { font-size:0.75rem; color:var(--primary); }
+.q-type-badge { font-size:0.68rem; padding:2px 8px; border-radius:999px; font-weight:700; }
+.q-type-badge.choice { background:#fff8e1; color:var(--gold-dark); }
+.q-type-badge.text   { background:var(--parchment2); color:var(--primary-dark); }
+.q-text { font-family:'Kaisei Decol',serif; font-size:1.05rem; line-height:1.7; color:var(--ink); margin-bottom:18px; }
+
+.choices { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.choice-btn { width:100%; padding:12px 16px; border:2px solid rgba(92,74,30,0.2); border-radius:6px; background:white; font-size:0.93rem; text-align:left; cursor:pointer; transition:all 0.2s; font-family:'Noto Sans JP',sans-serif; color:var(--ink); position:relative; }
+.choice-btn:hover:not(:disabled) { border-color:var(--primary); background:var(--parchment2); transform:translateX(4px); }
+.choice-btn.correct  { border-color:var(--success); background:#e8f5e9; color:#1b5e20; font-weight:700; }
+.choice-btn.wrong    { border-color:var(--danger);  background:#ffebee; color:#b71c1c; font-weight:700; }
+.choice-btn.show-ans { border-color:var(--success); background:#e8f5e9; color:#1b5e20; }
+.choice-btn:disabled { cursor:default; }
+.c-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); }
+
+.text-input-area { margin-bottom:10px; }
+.text-input-area input { width:100%; padding:12px 14px; border:2px solid rgba(92,74,30,0.22); border-radius:6px; font-size:1rem; font-family:'Noto Sans JP',sans-serif; outline:none; background:white; transition:border-color 0.2s; color:var(--ink); }
+.text-input-area input:focus { border-color:var(--primary); }
+.text-input-area input.correct { border-color:var(--success); background:#e8f5e9; }
+.text-input-area input.wrong   { border-color:var(--danger);  background:#ffebee; }
+
+.hint-row { margin:6px 0; }
+.hint-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 14px; background:rgba(200,160,0,0.1); border:1.5px dashed var(--gold-dark); border-radius:999px; font-size:0.78rem; color:#7a6000; cursor:pointer; font-family:'Noto Sans JP',sans-serif; font-weight:700; transition:background 0.2s; }
+.hint-btn:hover { background:rgba(200,160,0,0.2); }
+.hint-btn:disabled { opacity:0.5; cursor:default; }
+.hint-box { display:none; margin-top:6px; padding:8px 12px; background:rgba(200,160,0,0.08); border-left:3px solid var(--gold-dark); border-radius:4px; font-size:0.8rem; color:#7a6000; }
+.hint-box.show { display:block; animation:slideIn 0.2s ease; }
+
+.feedback { display:none; padding:12px 14px; border-radius:6px; margin-bottom:12px; font-size:0.88rem; line-height:1.65; animation:slideIn 0.3s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+.feedback.correct { background:#e8f5e9; color:#1b5e20; border-left:4px solid var(--success); }
+.feedback.wrong   { background:#ffebee; color:#b71c1c; border-left:4px solid var(--danger); }
+.feedback.show { display:block; }
+.fb-title { font-weight:700; font-size:0.95rem; margin-bottom:4px; }
+.fb-exp { font-size:0.8rem; margin-top:4px; }
+.fb-explain { font-size:0.83rem; color:#555; margin-top:6px; line-height:1.6; }
+
+.btn { width:100%; padding:13px; border:none; border-radius:6px; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:all 0.2s; }
+.btn-primary { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; box-shadow:0 3px 12px rgba(160,124,58,0.3); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(160,124,58,0.4); }
+.btn-secondary { background:linear-gradient(135deg,#5d1a1a,var(--accent)); color:white; }
+.btn:disabled { opacity:0.6; cursor:default; transform:none !important; }
+
+#result-screen { display:none; width:100%; max-width:540px; padding:40px 16px 60px; position:relative; z-index:1; text-align:center; }
+.result-emblem { font-size:4rem; margin-bottom:12px; }
+.result-title { font-family:'Kaisei Decol',serif; font-size:1.5rem; color:var(--primary-light); margin-bottom:4px; }
+.result-title-display { display:inline-block; background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; font-size:0.9rem; font-weight:700; padding:4px 16px; border-radius:999px; margin-bottom:16px; }
+.result-card { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:20px; margin-bottom:16px; }
+.result-score { font-family:'Kaisei Decol',serif; font-size:3rem; color:var(--ink); font-weight:700; }
+.result-score span { font-size:1rem; color:var(--primary); font-weight:400; }
+.result-level-row { display:flex; align-items:center; justify-content:center; gap:16px; margin:12px 0; flex-wrap:wrap; }
+.rl-item { text-align:center; }
+.rl-label { font-size:0.7rem; color:var(--primary); }
+.rl-val { font-size:1.2rem; font-weight:700; color:var(--ink); }
+.result-msg { font-size:0.9rem; color:#5a3a1a; line-height:1.7; margin:12px 0; }
+.result-table { width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left; margin-top:12px; }
+.result-table th { background:rgba(92,74,30,0.1); padding:7px 10px; color:#5a3a1a; font-weight:700; }
+.result-table td { padding:7px 10px; border-bottom:1px solid rgba(92,74,30,0.1); }
+.result-table .ok  { color:var(--success); font-weight:700; }
+.result-table .bad { color:var(--danger);  font-weight:700; }
+.title-collection { background:var(--parchment); border:2px solid var(--primary); border-radius:8px; padding:16px; margin-bottom:16px; }
+.tc-header { font-family:'Kaisei Decol',serif; font-size:1rem; color:var(--ink); margin-bottom:10px; }
+.tc-grid { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.tc-badge { padding:4px 12px; border-radius:999px; font-size:0.78rem; font-weight:700; }
+.tc-badge.earned { background:linear-gradient(135deg,var(--primary-dark),var(--primary-light)); color:white; }
+.tc-badge.locked { background:rgba(92,74,30,0.1); color:#b09060; border:1px dashed rgba(92,74,30,0.25); }
+.stars { font-size:1.8rem; letter-spacing:4px; margin:8px 0; }
+.result-btns { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+
+/* ===== 称号獲得 派手演出 ===== */
+#title-overlay.show .title-scroll{ animation:titlePop .6s cubic-bezier(.34,1.7,.5,1) both, titleGlow2 1.4s .6s ease-in-out infinite; box-shadow:0 0 0 4px rgba(255,215,0,.3),0 14px 50px rgba(0,0,0,.5); }
+@keyframes titlePop{0%{transform:scale(.3) rotate(-10deg);opacity:0;}60%{transform:scale(1.08) rotate(3deg);}100%{transform:scale(1) rotate(0);opacity:1;}}
+@keyframes titleGlow2{0%,100%{box-shadow:0 0 0 4px rgba(255,215,0,.3),0 14px 50px rgba(0,0,0,.5);}50%{box-shadow:0 0 0 12px rgba(255,215,0,.55),0 14px 64px rgba(255,180,0,.55);}}
+#title-overlay.show .title-emoji{ animation:titleEmojiPop .8s ease both; }
+@keyframes titleEmojiPop{0%{transform:scale(0) rotate(-180deg);}70%{transform:scale(1.35) rotate(12deg);}100%{transform:scale(1) rotate(0);}}
+.tap-hint{ font-size:.7rem; opacity:.55; margin-top:10px; }
+.confetti-piece{ position:fixed; top:-12vh; width:10px; height:14px; border-radius:2px; opacity:.95; z-index:1200; pointer-events:none; animation:confettiFall linear forwards; }
+@keyframes confettiFall{ to{ transform:translateY(120vh) rotate(720deg); } }
+.title-collection{display:none !important;} #title-overlay{display:none !important;}
+.intro-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+.itag{flex:0 1 calc(50% - 3px);box-sizing:border-box;text-align:center;}
+.itag-full{flex-basis:100%;}
+#qa-popup{display:none;position:fixed;inset:0;z-index:1100;background:rgba(5,17,31,.75);align-items:center;justify-content:center;padding:24px;}
+#qa-popup.show{display:flex;}
+.qa-popup-box{background:#fff;border:2px solid var(--primary);border-radius:10px;padding:20px 18px;max-width:420px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.qa-popup-text{font-size:0.9rem;color:var(--ink);line-height:1.7;white-space:pre-wrap;word-break:break-word;text-align:left;}
+.qa-popup-close{margin-top:16px;width:100%;padding:10px;background:linear-gradient(135deg,var(--primary-dark),var(--primary-light));color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;}
+.result-table td.q-cell{cursor:pointer;color:var(--primary-dark);text-decoration:underline dotted;}
+.exp-col-btn{font-size:0.74rem;padding:3px 10px;border:1.5px solid var(--gold-dark);border-radius:999px;background:#fffde7;color:#a07020;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;}
+.itag{word-break:keep-all;overflow-wrap:anywhere;} /* itag-nobreak */
+.itag{white-space:nowrap;overflow:hidden;padding-left:6px;padding-right:6px;} /* itag-oneline */
+</style>
+</head>
+<body>
+
+<div id="levelup-overlay">
+  <div class="levelup-ring"><div class="levelup-emoji">🏯</div></div>
+  <div class="levelup-text">LEVEL UP！</div>
+  <div class="levelup-level" id="lu-level">Lv.2 になった！</div>
+  <div class="levelup-title" id="lu-title"></div>
+  <button class="btn-levelup-ok" onclick="closeLevelup()">よし！続けるぞ ▶</button>
+</div>
+
+<div id="title-overlay" onclick="closeTitleOverlay()">
+  <div class="title-scroll" onclick="event.stopPropagation()">
+    <div class="title-new">🎊 称号獲得！</div>
+    <div class="title-emoji" id="to-emoji">🏯</div>
+    <div class="title-main" id="to-title"></div>
+    <div class="title-desc" id="to-desc"></div>
+    <button class="btn-title-ok" onclick="closeTitleOverlay()">受け取る！ ✨</button>
+    <div class="tap-hint">画面をタップでとじる</div>
+  </div>
+</div>
+
+<div id="intro-screen">
+  <div style="height:40px"></div>
+  <div class="intro-emblem">🐴</div>
+  <div class="intro-title">鎌倉時代<br>クイズ</div>
+  <div class="intro-sub">小5・6月の演習から出題！</div>
+  <div class="intro-card">
+    <div class="intro-tags">
+      <span class="itag">源頼朝と鎌倉幕府</span>
+      <span class="itag">御恩と奉公</span>
+      <span class="itag">承久の乱</span>
+      <span class="itag">御成敗式目</span>
+      <span class="itag">元寇</span>
+      <span class="itag">鎌倉時代の文化</span>
+    </div>
+    <div class="intro-desc">
+      経験値を手に入れてレベルアップ！<br>
+      めざせ全問正解！
+    </div>
+  </div>
+  <button class="btn-start" onclick="startQuiz()">スタート！ 🚀</button>
+</div>
+
+<div id="quiz-screen">
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-level" id="hud-level">🐴 Lv.1 鎌倉の見習い</div>
+      <div class="hud-score-chips">
+        <div class="hud-chip ok">✅ <span id="hud-ok">0</span></div>
+        <div class="hud-chip ng">❌ <span id="hud-ng">0</span></div>
+      </div>
+    </div>
+    <div class="exp-bar-wrap">
+      <div class="exp-label" id="exp-text">EXP 0/50</div>
+      <div class="exp-bar-bg"><div class="exp-bar-fill" id="exp-fill" style="width:0%"></div></div>
+      <div class="hud-title-badge" id="hud-title-badge">京の見習い</div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div style="padding:0 16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:999px;overflow:hidden;">
+        <div id="prog-fill" style="height:100%;background:linear-gradient(90deg,var(--primary-dark),var(--primary-light));border-radius:999px;transition:width 0.5s;width:0%"></div>
+      </div>
+      <div style="font-size:0.75rem;color:var(--primary-light);white-space:nowrap;" id="prog-label">0/20</div>
+    </div>
+  </div>
+
+  <div class="q-card" id="q-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <span class="section-badge" id="q-section">大問1</span>
+      <div class="q-meta" style="margin-bottom:0;flex:1;">
+        <span class="q-num" id="q-num">問1 / 20</span>
+        <span class="q-type-badge" id="q-type-badge">選択</span>
+      </div>
+    </div>
+    <div class="q-text" id="q-text"></div>
+    <div id="choices-wrap"></div>
+    <div id="text-input-wrap" style="display:none">
+      <div class="text-input-area">
+        <input type="text" id="text-ans" placeholder="答えを入力…" autocomplete="off">
+      </div>
+      <div class="hint-row">
+        <button class="hint-btn" id="hint-btn" onclick="showHint()">💡 ヒントを見る</button>
+        <div class="hint-box" id="hint-box"></div>
+      </div>
+      <button class="btn btn-secondary" id="submit-btn" onclick="submitText()" style="margin-bottom:10px;">答え合わせ ✔</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none;">次の問題へ →</button>
+  </div>
+  <div style="height:32px"></div>
+</div>
+
+<div id="result-screen">
+  <div class="result-emblem" id="res-emoji">🏆</div>
+  <div class="result-title">クイズ完了！</div>
+  <div class="stars" id="res-stars">⭐⭐⭐</div>
+  <div class="result-title-display" id="res-title-disp">👑 古墳大王</div>
+  <div class="result-card">
+    <div class="result-score" id="res-score">0<span> / 20問正解</span></div>
+    <div class="result-level-row">
+      <div class="rl-item"><div class="rl-label">最終レベル</div><div class="rl-val" id="res-level">Lv.1</div></div>
+      <div class="rl-item"><div class="rl-label">獲得EXP</div><div class="rl-val" id="res-exp">0</div></div>
+      <div class="rl-item"><div class="rl-label">正答率</div><div class="rl-val" id="res-pct">0%</div></div>
+    </div>
+    <div class="result-msg" id="res-msg"></div>
+  </div>
+  <div class="title-collection">
+    <div class="tc-header">📜 称号コレクション</div>
+    <div class="tc-grid" id="tc-grid"></div>
+  </div>
+  <div class="result-card">
+    <table class="result-table">
+      <thead><tr><th>#</th><th>問題</th><th>結果</th><th>解説</th></tr></thead>
+      <tbody id="res-tbody"></tbody>
+    </table>
+  </div>
+  <div class="result-btns">
+    <button class="btn btn-primary" onclick="restartQuiz()">もう一度やる 🔄</button>
+    <button class="btn btn-secondary" onclick="reviewWrong()" id="review-btn">❌ 間違えた問題だけやる</button>
+  </div>
+</div>
+
+<script>
+const LEVELS = [
+  { lv:1, need:0,   title:'鎌倉の見習い',   emoji:'🐴' },
+  { lv:2, need:30,  title:'御家人',         emoji:'🏹' },
+  { lv:3, need:80,  title:'地頭',           emoji:'🌾' },
+  { lv:4, need:150, title:'守護',           emoji:'🛡️' },
+  { lv:5, need:250, title:'六波羅探題',     emoji:'🏯' },
+  { lv:6, need:380, title:'執権',           emoji:'📜' },
+  { lv:7, need:550, title:'鎌倉の覇者',     emoji:'👑' },
+];
+
+const TITLES = [];
+
+let exp=0, currentLevel=1, earnedTitles=[];
+
+function getLevel(e){ let lv=LEVELS[0]; for(const l of LEVELS){ if(e>=l.need) lv=l; } return lv; }
+function addExp(amount){
+  const prev=getLevel(exp); exp+=amount; const next=getLevel(exp); updateHUD();
+  if(next.lv>prev.lv){ showLevelup(next); return true; } return false;
+}
+function updateHUD(){
+  const lv=getLevel(exp); const nextLv=LEVELS.find(l=>l.lv===lv.lv+1);
+  const expInLv=exp-lv.need; const expNeeded=nextLv?nextLv.need-lv.need:999;
+  const pct=nextLv?Math.min((expInLv/expNeeded)*100,100):100;
+  document.getElementById('hud-level').textContent=`${lv.emoji} Lv.${lv.lv} ${lv.title}`;
+  document.getElementById('hud-title-badge').textContent=lv.title;
+  document.getElementById('exp-fill').style.width=pct+'%';
+  document.getElementById('exp-text').textContent=nextLv?`EXP ${expInLv}/${expNeeded}`:'MAX';
+  currentLevel=lv.lv;
+}
+function showLevelup(lv){
+  document.getElementById('lu-level').textContent=`Lv.${lv.lv} になった！`;
+  document.getElementById('lu-title').textContent=`${lv.emoji} 称号「${lv.title}」を獲得！`;
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+function closeLevelup(){ document.getElementById('levelup-overlay').classList.remove('show'); }
+let titleCallback=null;
+function showTitleOverlay(t,cb){
+  document.getElementById('to-emoji').textContent=t.emoji;
+  document.getElementById('to-title').textContent=t.name;
+  document.getElementById('to-desc').textContent=t.desc;
+  document.getElementById('title-overlay').classList.add('show');
+  spawnConfetti();
+  titleCallback=cb||null;
+}
+function spawnConfetti(){
+  const colors=['#ffd700','#ff7043','#42a5f5','#66bb6a','#ab47bc','#ec407a'];
+  for(let i=0;i<28;i++){
+    const c=document.createElement('div'); c.className='confetti-piece';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.animationDuration=(1.2+Math.random()*1.3)+'s';
+    c.style.animationDelay=(Math.random()*0.3)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),2900);
+  }
+}
+function closeTitleOverlay(){
+  document.getElementById('title-overlay').classList.remove('show');
+  if(titleCallback){ titleCallback(); titleCallback=null; }
+}
+
+const ALL_QUESTIONS = [
+  { id:1, section:'6月② 大問1', type:'text',
+    text:'1180年に伊豆で兵をあげ、鎌倉を本拠地として関東の支配を固めた人物はだれですか。漢字で答えなさい。',
+    answer:'源頼朝',
+    hint:'「みなもとのより…」のちに鎌倉幕府を開いた人物です。',
+    explanation:'源頼朝（みなもとのよりとも）は1180年に伊豆で兵をあげ、鎌倉を本拠地にして関東を固めました。のちに鎌倉幕府を開いた、武士の政治の出発点となる人物です。', exp:10 },
+  { id:2, section:'6月② 大問1', type:'text',
+    text:'1185年に起こった、源氏が平氏をほろぼした戦いを何といいますか。',
+    answers:['壇ノ浦の戦い','壇の浦の戦い','壇ノ浦','壇の浦','だんのうらのたたかい'],
+    hint:'今の山口県下関市の海で起こった戦いです。',
+    explanation:'壇ノ浦の戦い（だんのうらのたたかい）は1185年、今の山口県下関市の海で起こりました。源氏が勝ち、平氏はほろびました。', exp:10 },
+  { id:3, section:'6月② 大問1', type:'text',
+    text:'源頼朝の弟で、のちに奥州藤原氏をたよって兄からのがれるも自害した人物はだれですか。漢字で答えなさい。',
+    answer:'源義経',
+    hint:'「みなもとのよし…」壇ノ浦の戦いで活やくしました。',
+    explanation:'源義経（みなもとのよしつね）は平氏との戦いで大活やくしましたが、兄の頼朝と対立しました。奥州（今の東北地方）の藤原氏をたよってにげましたが、最後は自害しました。', exp:10 },
+  { id:4, section:'6月② 大問1', type:'text',
+    text:'1192年に源頼朝が朝廷から命じられた役職を何といいますか。',
+    answers:['征夷大将軍','せいいたいしょうぐん'],
+    hint:'「せいい…」武士のトップの役職です。',
+    explanation:'征夷大将軍（せいいたいしょうぐん）はもともと東北地方の人々を従わせるための役職でした。頼朝がこれに任命されてから、武士のトップを表す役職になりました。', exp:10 },
+  { id:5, section:'6月② 大問1', type:'text',
+    text:'領地（土地）を仲立ちとした主人と家来の関係を、何制度といいますか。',
+    answers:['封建','封建制度','ほうけん','ほうけんせいど'],
+    hint:'「ほう…」土地を通じたご主人と家来の結びつきです。',
+    explanation:'封建制度（ほうけんせいど）は、主人が家来に土地を与えたり守ったりし、家来は主人のために働くという、土地を通じた主従関係のしくみです。', exp:10 },
+  { id:6, section:'6月② 大問1', type:'text',
+    text:'鎌倉時代に北条氏が独占した、将軍の補佐役を何といいますか。',
+    answers:['執権','しっけん'],
+    hint:'「しっ…」室町幕府の「管領」にあたる役職です。',
+    explanation:'執権（しっけん）は将軍を助ける役職です。北条氏が代々この役職をつとめ、実際の政治を動かしました（執権政治）。', exp:10 },
+  { id:7, section:'6月② 大問1', type:'text',
+    text:'暗殺によって亡くなった、鎌倉幕府の第3代将軍はだれですか。漢字で答えなさい。',
+    answer:'源実朝',
+    hint:'「みなもとのさね…」源氏の将軍は3代で終わりました。',
+    explanation:'源実朝（みなもとのさねとも）は第3代将軍で、和歌の名人としても知られます。暗殺されて源氏の将軍はとだえ、北条氏が政治を動かすようになりました。', exp:10 },
+  { id:8, section:'6月② 大問2', type:'text',
+    text:'鎌倉幕府の将軍と御家人の関係で、御家人が「京都・鎌倉の警護」や「戦いに参加する（いざ鎌倉）」ことで将軍に尽くすことを何といいますか。',
+    answers:['奉公','ほうこう'],
+    hint:'「ほう…」御家人から将軍へのはたらきです。',
+    explanation:'奉公（ほうこう）は、御家人が将軍のために命がけで働くことです。「いざ鎌倉」は、何かあればすぐに鎌倉へかけつける、という意味です。', exp:10 },
+  { id:9, section:'6月② 大問2', type:'text',
+    text:'鎌倉幕府の将軍と御家人の関係で、将軍が御家人に「領地の支配を認める」「新しい領地を与える」「守護・地頭に任命する」ことを何といいますか。',
+    answers:['御恩','ごおん'],
+    hint:'「ご…」将軍から御家人へのごほうびです。',
+    explanation:'御恩（ごおん）は将軍が御家人に与える利益のことです。「御恩」と「奉公」の関係で、将軍と御家人は強く結びついていました。', exp:10 },
+  { id:10, section:'6月② 大問2', type:'text',
+    text:'1192年ごろの鎌倉幕府のしくみで、鎌倉に置かれ「裁判」を担当した役所を何といいますか。',
+    answers:['問注所','もんちゅうじょ'],
+    hint:'「もんちゅう…」訴えを聞く役所です。',
+    explanation:'鎌倉幕府には、政治一般を行う政所（まんどころ）、御家人を取りしまり軍事を行う侍所（さむらいどころ）、裁判を行う問注所（もんちゅうじょ）が置かれました。', exp:10 },
+  { id:11, section:'6月② 大問2', type:'text',
+    text:'鎌倉幕府のしくみで、地方の国ごとに置かれ「国内の御家人の統制・軍事・警察」を担当した役職を何といいますか。',
+    answers:['守護','しゅご'],
+    hint:'「しゅ…」国ごとに置かれました。',
+    explanation:'守護（しゅご）は国ごとに置かれ、その国の御家人をまとめ、軍事や警察の仕事をしました。', exp:10 },
+  { id:12, section:'6月② 大問2', type:'text',
+    text:'鎌倉幕府のしくみで、地方に置かれ「土地の管理・年貢の取り立て・警察」を担当した役職を何といいますか。',
+    answers:['地頭','じとう'],
+    hint:'「じ…」荘園や公領ごとに置かれました。',
+    explanation:'地頭（じとう）は荘園（しょうえん）や公領ごとに置かれ、土地の管理や年貢（ねんぐ＝税として納める米など）の取り立てを行いました。', exp:10 },
+  { id:13, section:'6月② 大問2', type:'text',
+    text:'御家人たちが行った武芸の一つで、走る馬の上から的に向かって矢を射るものを何といいますか。ひらがなで答えなさい。',
+    answers:['やぶさめ','流鏑馬'],
+    hint:'今でも各地の神社で行事として見られます。',
+    explanation:'やぶさめ（流鏑馬）は、馬を走らせながら3つの的に矢を射る武芸です。武士たちはふだんから弓や馬のけいこにはげみました。現在も神社の奉納行事として行われています。', exp:10 },
+  { id:14, section:'6月② 大問3', type:'text',
+    text:'後鳥羽上皇が鎌倉幕府に対して乱を起こしたのは西暦何年ですか。（「年」をつけて答えてね）',
+    answers:['1221年','1221'],
+    hint:'「人に不意（1221）打ち」と覚えよう。',
+    explanation:'1221年、朝廷の力を取りもどそうとした後鳥羽上皇（ごとばじょうこう）が、鎌倉幕府をたおすために兵をあげました。', exp:10 },
+  { id:15, section:'6月② 大問3', type:'text',
+    text:'1221年に後鳥羽上皇が鎌倉幕府に対して起こした乱を何といいますか。',
+    answers:['承久の乱','じょうきゅうのらん'],
+    hint:'「じょうきゅう…」年号がつきます。',
+    explanation:'承久の乱（じょうきゅうのらん）は、後鳥羽上皇が幕府をたおそうとして起こした戦いです。幕府軍が勝利しました。', exp:10 },
+  { id:16, section:'6月② 大問3', type:'choice',
+    text:'承久の乱について述べた文として、正しいものを選びなさい。',
+    choices:['この乱に敗れた後鳥羽上皇は、現在の島根県にある隠岐に流された','この乱が起こった際に鎌倉幕府を率いていたのは北条時政だった','鎌倉幕府の御家人を団結させるために、北条政子が京都で演説を行った','富士川の戦いに幕府軍が勝利したことで、鎌倉幕府の勝利が決定的になった'],
+    answer:'この乱に敗れた後鳥羽上皇は、現在の島根県にある隠岐に流された',
+    explanation:'敗れた後鳥羽上皇は隠岐（おき＝島根県の島）に流されました。このとき北条政子が演説をしたのは京都ではなく鎌倉です。幕府を率いていた執権は北条義時（ほうじょうよしとき）でした。', exp:10 },
+  { id:17, section:'6月② 大問3', type:'text',
+    text:'承久の乱に勝利した鎌倉幕府が、朝廷や西国の監視をさせるために京都に設置したものを何といいますか。',
+    answers:['六波羅探題','ろくはらたんだい'],
+    hint:'「ろくはら…」京都に置かれました。',
+    explanation:'六波羅探題（ろくはらたんだい）は京都に置かれ、朝廷の動きや西日本の武士を見はりました。これで幕府の力が全国に及ぶようになりました。', exp:10 },
+  { id:18, section:'6月② 大問3', type:'text',
+    text:'鎌倉時代につくられた、武士による初めての法律を何といいますか。',
+    answers:['御成敗式目','貞永式目','ごせいばいしきもく','じょうえいしきもく'],
+    hint:'「ご…しきもく」とも「じょうえい…」とも呼ばれます。',
+    explanation:'御成敗式目（ごせいばいしきもく）は1232年につくられた、武士による初めての法律です。貞永式目（じょうえいしきもく）ともいい、のちの室町時代や江戸時代の法律にも影響を与えました。', exp:10 },
+  { id:19, section:'6月② 大問3', type:'text',
+    text:'御成敗式目は、主にトラブルが起きた際の何の基準や、土地の所有のルールを定めていましたか。',
+    answers:['裁判','判決','さいばん','はんけつ'],
+    hint:'問注所が担当していた仕事です。',
+    explanation:'御成敗式目は、裁判（さいばん）のときの基準や、土地をめぐる争いのルールを、武士にもわかりやすく定めたものです。', exp:10 },
+  { id:20, section:'6月② 大問3', type:'text',
+    text:'武士による初めての法律「御成敗式目」をつくった人物はだれですか。漢字で答えなさい。',
+    answer:'北条泰時',
+    hint:'「ほうじょうやす…」第3代執権です。',
+    explanation:'北条泰時（ほうじょうやすとき）は第3代執権で、1232年に御成敗式目を定めました。', exp:10 },
+  { id:21, section:'6月③ 大問1', type:'text',
+    text:'鎌倉時代に中国にあった国が、2度にわたって日本に襲来した出来事をまとめて何といいますか。',
+    answers:['元寇','げんこう','蒙古襲来'],
+    hint:'「げん…」モンゴルの国が攻めてきました。',
+    explanation:'元寇（げんこう）は、元（げん）の軍が1274年と1281年の2度、九州北部に攻めてきた出来事です。蒙古襲来（もうこしゅうらい）ともいいます。', exp:10 },
+  { id:22, section:'6月③ 大問1', type:'text',
+    text:'元の1度目の襲来のあと、再び攻めてくることに備えて幕府がつくったものを何といいますか。',
+    answers:['防塁','石塁','ぼうるい','せきるい'],
+    hint:'博多湾の海岸ぞいにつくられた石のかべです。',
+    explanation:'防塁（ぼうるい）は石塁（せきるい）ともいい、博多湾（福岡県）の海岸に築かれた石のかべです。2度目の襲来では元軍の上陸を防ぎました。', exp:10 },
+  { id:23, section:'6月③ 大問1', type:'text',
+    text:'同じ土地で1年間に異なる二つの作物を栽培する方法を何といいますか。',
+    answers:['二毛作','にもうさく'],
+    hint:'米のあとに麦をつくる、などの方法です。',
+    explanation:'二毛作（にもうさく）は、同じ田畑で1年に2種類の作物（夏は米、冬は麦など）をつくる方法です。鎌倉時代に西日本を中心に広まりました。', exp:10 },
+  { id:24, section:'6月③ 大問1', type:'text',
+    text:'鎌倉時代、定期的に開かれた市で物の取引に使われた貨幣を何といいますか。',
+    answers:['宋銭','そうせん'],
+    hint:'中国の「宋」から輸入されたお金です。',
+    explanation:'宋銭（そうせん）は中国の宋から輸入された銅のお金です。月に3回ほど開かれる定期市（ていきいち）での売り買いに使われました。', exp:10 },
+  { id:25, section:'6月③ 大問1', type:'text',
+    text:'鎌倉時代、法然によって開かれた仏教の宗派を何といいますか。',
+    answers:['浄土宗','じょうどしゅう'],
+    hint:'「南無阿弥陀仏」と唱えることを教えました。',
+    explanation:'浄土宗（じょうどしゅう）は法然（ほうねん）が開きました。「南無阿弥陀仏（なむあみだぶつ）」と念仏を唱えれば、だれでも極楽浄土へ行けると説きました。', exp:10 },
+  { id:26, section:'6月③ 大問1', type:'text',
+    text:'鎌倉時代の仏教で、踊りながら念仏を唱える「踊り念仏」を行った宗派を何といいますか。',
+    answers:['時宗','じしゅう'],
+    hint:'一遍（いっぺん）が開いた宗派です。',
+    explanation:'時宗（じしゅう）は一遍（いっぺん）が開き、各地を回って踊り念仏を広めました。', exp:10 },
+  { id:27, section:'6月③ 大問2', type:'text',
+    text:'チンギス・ハンの孫で、モンゴル高原から中国にかけての地域に国を建て、2度にわたって日本に襲来した人物はだれですか。',
+    answers:['フビライ・ハン','フビライハン','フビライ','クビライ・ハン','クビライハン','クビライ'],
+    hint:'「フビ…」元の皇帝です。',
+    explanation:'フビライ・ハンはモンゴル帝国を建てたチンギス・ハンの孫で、中国に元を建てました。日本にも従うよう求めましたが、断られたため攻めてきました。', exp:10 },
+  { id:28, section:'6月③ 大問2', type:'text',
+    text:'元が日本に襲来したとき、元軍を中心となって迎え撃った当時の執権はだれですか。漢字で答えなさい。',
+    answer:'北条時宗',
+    hint:'「ほうじょうとき…」第8代執権です。',
+    explanation:'北条時宗（ほうじょうときむね）は第8代執権です。元の要求をはねつけ、御家人たちを九州に集めて元軍と戦いました。', exp:10 },
+  { id:29, section:'6月③ 大問2', type:'text',
+    text:'フビライ・ハンが、モンゴル高原から中国にかけての地域に建てた国の名前は何ですか。漢字で答えなさい。',
+    answer:'元',
+    hint:'漢字1文字の国名です。',
+    explanation:'元（げん）はフビライ・ハンが建てた国で、都は大都（今の北京）に置かれました。', exp:10 },
+  { id:30, section:'6月③ 大問2', type:'text',
+    text:'元の2度の襲来のうち、1度目（1274年）を何といいますか。',
+    answers:['文永の役','ぶんえいのえき'],
+    hint:'「ぶんえい…」年号がつきます。',
+    explanation:'文永の役（ぶんえいのえき）は1274年の1度目の襲来です。元軍の集団戦法や「てつはう」という火薬の武器に、日本の武士は苦しめられました。', exp:10 },
+  { id:31, section:'6月③ 大問2', type:'text',
+    text:'元の2度の襲来のうち、2度目（1281年）を何といいますか。',
+    answers:['弘安の役','こうあんのえき'],
+    hint:'「こうあん…」年号がつきます。',
+    explanation:'弘安の役（こうあんのえき）は1281年の2度目の襲来です。防塁で上陸を防ぎ、暴風雨もあって元軍は引きあげました。', exp:10 },
+  { id:32, section:'6月③ 大問2', type:'choice',
+    text:'元寇のあと、御家人たちは十分なほうびが得られず生活が苦しくなりました。そこで幕府が出した「永仁の徳政令」はどのような政策ですか。',
+    choices:['生活に苦しむ御家人たちを救うため、借金を帳消しにした','生活に苦しむ御家人たちを救うため、新しい領地を与えた','生活に苦しむ御家人たちを救うため、年貢を半分にした','生活に苦しむ御家人たちを救うため、宋銭を配った'],
+    answer:'生活に苦しむ御家人たちを救うため、借金を帳消しにした',
+    explanation:'永仁の徳政令（えいにんのとくせいれい）は1297年、御家人の借金を帳消しにした法令です。しかし、その後お金を貸してもらえなくなるなど、かえって不満が高まりました。', exp:10 },
+  { id:33, section:'6月③ 大問3', type:'text',
+    text:'鎌倉時代にできた仏教の一つ「曹洞宗」の開祖はだれですか。漢字で答えなさい。',
+    answer:'道元',
+    hint:'「どう…」中国（宋）で学んだお坊さんです。',
+    explanation:'道元（どうげん）は宋で禅を学び、曹洞宗（そうとうしゅう）を開きました。福井県の永平寺（えいへいじ）を建てました。', exp:10 },
+  { id:34, section:'6月③ 大問3', type:'text',
+    text:'曹洞宗が、悟りを開くために大切にした修行を何といいますか。',
+    answers:['座禅','坐禅','ざぜん'],
+    hint:'静かにすわって心を整える修行です。',
+    explanation:'座禅（ざぜん）は、姿勢を正して静かにすわり、心を集中させる修行です。禅宗の中心となる修行です。', exp:10 },
+  { id:35, section:'6月③ 大問3', type:'text',
+    text:'栄西がつくった、曹洞宗とともに「禅宗」とされる宗派を何といいますか。',
+    answers:['臨済宗','りんざいしゅう'],
+    hint:'「りんざい…」幕府の保護を受けました。',
+    explanation:'臨済宗（りんざいしゅう）は栄西（えいさい）が開いた禅宗で、鎌倉幕府の保護を受けて武士の間に広まりました。栄西は茶を飲む習慣を広めたことでも知られます。', exp:10 },
+  { id:36, section:'6月③ 大問3', type:'text',
+    text:'東大寺は奈良時代の建築物ですが、鎌倉時代につくられた東大寺の門を何といいますか。',
+    answers:['南大門','なんだいもん'],
+    hint:'東大寺の南にある大きな門です。',
+    explanation:'東大寺南大門（なんだいもん）は、平安時代末の戦乱で焼けた東大寺を再建するときにつくられました。', exp:10 },
+  { id:37, section:'6月③ 大問3', type:'text',
+    text:'東大寺南大門の中にある、運慶や快慶がつくったとても迫力のある像を何といいますか。',
+    answers:['金剛力士像','こんごうりきしぞう'],
+    hint:'「こんごう…」門の左右に立つ像です。',
+    explanation:'金剛力士像（こんごうりきしぞう）は運慶（うんけい）・快慶（かいけい）らが約70日でつくったといわれる、高さ8mをこえる力強い木像です。', exp:10 },
+  { id:38, section:'6月③ 大問3', type:'text',
+    text:'広さ約9㎡の小さな家「方丈庵」に住み、『方丈記』を書いた人物はだれですか。漢字で答えなさい。',
+    answer:'鴨長明',
+    hint:'「かものちょう…」京都の下鴨神社に関係の深い人物です。',
+    explanation:'鴨長明（かものちょうめい）は、世の中のうつり変わりのはかなさを『方丈記（ほうじょうき）』につづりました。', exp:10 },
+  { id:39, section:'6月③ 大問3', type:'text',
+    text:'「祇園精舎の鐘の声　諸行無常の響きあり」という冒頭から始まり、戦乱を題材にした、鎌倉時代の物語を何といいますか。',
+    answers:['平家物語','へいけものがたり'],
+    hint:'平氏の栄えとほろびをえがいた物語です。',
+    explanation:'平家物語（へいけものがたり）は、平氏が栄えてからほろびるまでをえがいた物語です。「諸行無常」は、この世のすべては変わり続けるという意味です。', exp:10 },
+  { id:40, section:'6月③ 大問3', type:'text',
+    text:'『平家物語』を、琵琶をひきながら語り、多くの人に口承（文字ではなく言葉で伝える）で受け継いだ人々を何といいますか。',
+    answers:['琵琶法師','びわほうし'],
+    hint:'「びわ…」楽器の名前がつきます。',
+    explanation:'琵琶法師（びわほうし）は、琵琶という楽器をひきながら平家物語を語り歩いたお坊さんの姿をした人々です。文字が読めない人々にも物語が広まりました。', exp:10 },
+];
+
+let questions=[], currentIndex=0, correctCount=0, wrongCount=0, answered=false, results=[];
+
+function startQuiz(questionSet){
+  const isReview=!!questionSet;
+  questions=questionSet||[...ALL_QUESTIONS].sort(()=>Math.random()-0.5);
+  currentIndex=0; correctCount=0; wrongCount=0; results=[]; answered=false; exp=0;
+  if(!isReview) earnedTitles=[];
+  document.getElementById('intro-screen').style.display='none';
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('quiz-screen').style.display='block';
+  document.getElementById('hud').style.display='block';
+  updateHUD(); renderQuestion();
+  /* 開始時の称号演出は廃止（称号は5割/8割/全問で獲得） */
+}
+
+function renderQuestion(){
+  const q=questions[currentIndex];
+  answered=false;
+  const card=document.getElementById('q-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  document.getElementById('q-section').textContent=q.section;
+  document.getElementById('q-num').textContent=`問${currentIndex+1} / ${questions.length}`;
+  document.getElementById('q-text').textContent=q.text;
+  const tb=document.getElementById('q-type-badge');
+  if(q.type==='choice'){ tb.textContent='選択'; tb.className='q-type-badge choice'; }
+  else{ tb.textContent='記述'; tb.className='q-type-badge text'; }
+  const fb=document.getElementById('feedback');
+  fb.className='feedback'; fb.innerHTML='';
+  document.getElementById('next-btn').style.display='none';
+  const choicesWrap=document.getElementById('choices-wrap');
+  const textWrap=document.getElementById('text-input-wrap');
+  choicesWrap.innerHTML=''; textWrap.style.display='none';
+  if(q.type==='choice'){
+    renderChoices(q,choicesWrap);
+  } else {
+    textWrap.style.display='block';
+    const input=document.getElementById('text-ans');
+    input.value=''; input.className=''; input.disabled=false;
+    const hintBtn=document.getElementById('hint-btn');
+    const hintBox=document.getElementById('hint-box');
+    hintBox.textContent=''; hintBox.classList.remove('show');
+    if(q.hint){ hintBtn.style.display=''; hintBtn.disabled=false; hintBtn.textContent='💡 ヒントを見る'; }
+    else{ hintBtn.style.display='none'; }
+    document.getElementById('submit-btn').disabled=false;
+    setTimeout(()=>input.focus(),100);
+    input.onkeydown=e=>{ if(e.key==='Enter') submitText(); };
+  }
+  updateProgress();
+}
+
+function renderChoices(q,wrap){
+  const div=document.createElement('div');
+  div.className='choices';
+  const list=q.ordered?[...q.choices]:[...q.choices].sort(()=>Math.random()-0.5);
+  list.forEach(ch=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn'; btn.textContent=ch;
+    btn.onclick=()=>selectChoice(btn,ch,q);
+    div.appendChild(btn);
+  });
+  wrap.appendChild(div);
+}
+
+function selectChoice(btn,choice,q){
+  if(answered) return;
+  answered=true;
+  const isCorrect=(choice===q.answer);
+  document.querySelectorAll('.choice-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===q.answer){ b.classList.add('show-ans'); b.innerHTML+=`<span class="c-icon">✅</span>`; }
+  });
+  if(!isCorrect){ btn.classList.remove('show-ans'); btn.classList.add('wrong'); btn.innerHTML=btn.textContent.replace('<span class="c-icon">✅</span>','')+`<span class="c-icon">❌</span>`; }
+  else{ btn.classList.add('correct'); }
+  processAnswer(isCorrect,choice,q);
+}
+
+function showHint(){
+  const q=questions[currentIndex];
+  const hb=document.getElementById('hint-box');
+  hb.textContent=`💡 ヒント：${q.hint}`; hb.classList.add('show');
+  document.getElementById('hint-btn').disabled=true;
+  document.getElementById('hint-btn').textContent='💡 ヒントを見た';
+}
+
+function submitText(){
+  if(answered) return;
+  const q=questions[currentIndex];
+  const input=document.getElementById('text-ans');
+  const userAns=input.value.trim();
+  if(!userAns){ input.style.borderColor='orange'; setTimeout(()=>input.style.borderColor='',600); return; }
+  answered=true;
+  document.getElementById('submit-btn').disabled=true;
+  input.disabled=true;
+  const norm=s=>s.replace(/\s|　/g,'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[Ａ-Ｚａ-ｚ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toLowerCase();
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const isCorrect=correctList.some(a=>norm(userAns)===norm(a));
+  input.className=isCorrect?'correct':'wrong';
+  processAnswer(isCorrect,userAns,q);
+}
+
+function processAnswer(isCorrect,userAns,q){
+  if(isCorrect){ correctCount++; document.getElementById('hud-ok').textContent=correctCount; }
+  else{ wrongCount++; document.getElementById('hud-ng').textContent=wrongCount; }
+  results.push({q,isCorrect,userAnswer:userAns});
+  const gained=isCorrect?q.exp:Math.floor(q.exp*0.2);
+  addExp(gained);
+  showFeedback(isCorrect,q,gained);
+  document.getElementById('next-btn').style.display='block';
+}
+
+function showFeedback(isCorrect,q,gained){
+  const fb=document.getElementById('feedback');
+  fb.className='feedback '+(isCorrect?'correct':'wrong')+' show';
+  const correctList=Array.isArray(q.answers)?q.answers:[q.answer];
+  const answerDisp=correctList[0];
+  fb.innerHTML=`
+    <div class="fb-title">${isCorrect?'🎉 正解！':`❌ 不正解… 正解は「${answerDisp}」`}</div>
+    <div class="fb-exp">${isCorrect?`✨ +${gained} EXP 獲得！`:`💧 +${gained} EXP（参加ポイント）`}</div>
+    <div class="fb-explain">📖 ${q.explanation}</div>
+  `;
+}
+
+function nextQuestion(){
+  if(currentIndex+1>=questions.length) showResult();
+  else{ currentIndex++; renderQuestion(); }
+}
+
+function updateProgress(){
+  const pct=(currentIndex/questions.length)*100;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-label').textContent=`${currentIndex}/${questions.length}`;
+}
+
+function showResult(){
+  document.getElementById('quiz-screen').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('result-screen').style.display='block';
+  const total=questions.length; const pct=correctCount/total; const lv=getLevel(exp);
+  let emoji,stars,msg;
+  if(pct>=1.0)      { emoji='🏆'; stars='⭐⭐⭐'; msg='全問正解！完璧だ！「'+lv.title+'」になった！✨'; }
+  else if(pct>=0.8) { emoji='😄'; stars='⭐⭐';   msg='よくできた！あと少しで満点。間違えた問題を確認しよう！'; }
+  else if(pct>=0.5) { emoji='😊'; stars='⭐';     msg='がんばった！半分以上正解。復習してもう一度挑戦！'; }
+  else              { emoji='💪'; stars='';        msg='まだ覚えていないところがあるね。一つずつ確認しよう！'; }
+  document.getElementById('res-emoji').textContent=emoji;
+  document.getElementById('res-stars').textContent=stars;
+  document.getElementById('res-score').innerHTML=`${correctCount}<span> / ${total}問正解</span>`;
+  document.getElementById('res-msg').textContent=msg;
+  document.getElementById('res-level').textContent=`Lv.${lv.lv}`;
+  document.getElementById('res-exp').textContent=exp;
+  document.getElementById('res-pct').textContent=Math.round(pct*100)+'%';
+
+  const newTitles=TITLES.filter(t=>t.id!=='start'&&!earnedTitles.includes(t.id)&&t.cond(results.map(r=>r.isCorrect),correctCount,wrongCount));
+  newTitles.forEach(t=>earnedTitles.push(t.id));
+  const topTitle=[...TITLES].reverse().find(t=>earnedTitles.includes(t.id));
+  document.getElementById('res-title-disp').textContent=`${lv.emoji} ${lv.title}`;
+
+  const grid=document.getElementById('tc-grid');
+  grid.innerHTML='';
+  TITLES.forEach(t=>{
+    const span=document.createElement('span');
+    span.className='tc-badge '+(earnedTitles.includes(t.id)?'earned':'locked');
+    span.textContent=earnedTitles.includes(t.id)?`${t.emoji} ${t.name}`:'🔒 ???';
+    span.title=earnedTitles.includes(t.id)?t.desc:'未獲得';
+    grid.appendChild(span);
+  });
+
+  const tbody=document.getElementById('res-tbody');
+  tbody.innerHTML='';
+  results.forEach((r,i)=>{
+    const shortQ=r.q.text.length>20?r.q.text.slice(0,20)+'…':r.q.text;
+    const correctDisp=Array.isArray(r.q.answers)?r.q.answers[0]:r.q.answer;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td class="q-cell"></td><td class="${r.isCorrect?'ok':'bad'}">${r.isCorrect?'✅ 正解':'❌ '+correctDisp}</td><td class="exp-cell"></td>`;
+    const qCell=tr.querySelector('.q-cell');
+    qCell.textContent=shortQ;
+    qCell.onclick=()=>openQaPopup(r.q.text, r.q.qImg||'');
+    if(r.q.explanation){
+      const correctList=Array.isArray(r.q.answers)?r.q.answers.join(' / '):r.q.answer;
+      const b=document.createElement('button'); b.className='exp-col-btn'; b.textContent='解説';
+      b.onclick=()=>openQaPopup('正解：'+correctList+'\n\n'+r.q.explanation, r.q.expImg||'');
+      tr.querySelector('.exp-cell').appendChild(b);
+    }
+    tbody.appendChild(tr);
+  });
+  document.getElementById('review-btn').style.display=results.some(r=>!r.isCorrect)?'block':'none';
+  if(newTitles.length>0){ setTimeout(()=>{ showTitleOverlay(newTitles[newTitles.length-1]); },800); }
+}
+
+function toggleExp(btn){
+  const expTr=btn._expTr;
+  const isShown=expTr.style.display!=='none';
+  expTr.style.display=isShown?'none':'table-row';
+  btn.textContent=isShown?'💡 解説を見る':'💡 解説を閉じる';
+}
+
+function restartQuiz(){
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('intro-screen').style.display='flex';
+  document.getElementById('intro-screen').style.flexDirection='column';
+  document.getElementById('intro-screen').style.alignItems='center';
+}
+
+function reviewWrong(){
+  const wrong=results.filter(r=>!r.isCorrect).map(r=>r.q);
+  if(wrong.length>0) startQuiz(wrong);
+}
+</script>
+<div id="qa-popup" onclick="closeQaPopup()">
+  <div class="qa-popup-box" onclick="event.stopPropagation()">
+    <div class="qa-popup-text" id="qa-popup-text"></div>
+    <button class="qa-popup-close" onclick="closeQaPopup()">✕ 閉じる</button>
+  </div>
+</div>
+<script>
+function openQaPopup(t,img){ var b=document.getElementById('qa-popup-text'); b.textContent=t; if(img){ var im=document.createElement('img'); im.src=img; im.style.cssText='width:100%;border-radius:6px;margin-top:10px;'; b.appendChild(im); } document.getElementById('qa-popup').classList.add('show'); }
+function closeQaPopup(){ document.getElementById('qa-popup').classList.remove('show'); }
+</script>
+<script>/* itag-fit */(function(){function fit(){document.querySelectorAll('.itag').forEach(function(e){e.style.fontSize='';var s=parseFloat(getComputedStyle(e).fontSize);while(e.scrollWidth>e.clientWidth&&s>8){s-=0.5;e.style.fontSize=s+'px';}});}window.addEventListener('load',fit);window.addEventListener('resize',fit);if(document.fonts)document.fonts.ready.then(fit);})();</script>
+</body>
+</html>
